@@ -12,7 +12,7 @@ const  personalInfoSchema = new mongoose.Schema({
             lastName: {
             type:String,
             required:true,
-            unique:true
+            
          },
             email:{
             type:String,
@@ -68,36 +68,36 @@ const  personalInfoSchema = new mongoose.Schema({
                 enum:['Yes', 'No']
             },
             permanentAddress: {
-                address: {
+                Paddress: {
                     type:String
                 },
-                city: {
+                Pcity: {
                     type:String,
                     required:true,
                 },
-                state: {
+                Pstate: {
                     type:String,
                     required:true,
                 },
-                pin: {
+                Ppin: {
                     type:Number,
                     required:true
                 }
             },
             temporaryAddress: {
-                address: {
+                Taddress: {
                     type:String,
                     required:true,
                 },
-                city: {
+                Tcity: {
                     type:String,
                     required:true,
                 },
-                state: {
+                Tstate: {
                     type:String,
                     required:true,
                 },
-                pin: {
+                Tpin: {
                     type:Number,
                     required:true,
                 },

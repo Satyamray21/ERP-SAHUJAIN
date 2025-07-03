@@ -25,8 +25,9 @@ app.use(express.urlencoded(
     }
 ))
 app.use('/upload', express.static(path.join(__dirname, 'upload')));
-app.use('/resume', express.static(path.join(__dirname, 'resume')))
+
 app.use(cookieParser());
 
-
+import personalInfoRouter from "./src/router/personalInfo.rotuer.js"
+app.use("/api/v1/personalInfo",personalInfoRouter);
 export { app }
