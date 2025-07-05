@@ -105,36 +105,37 @@ export const registerAllInfo = asyncHandler(async (req, res) => {
   }
 
   // Step 5: Save academic info
-  await AcademicInfo.create({
-    userId,
-    academicRecords: academicRecords.map((record) => ({
-      level: record.level,
-      board: record.board,
-      subject: record.subject,
-      yearOfPassing: record.yearOfPassing,
-      scoreType: record.scoreType,
-      marksObtained:
-        record.scoreType === "Percentage" ? record.marksObtained : undefined,
-      maximumMarks:
-        record.scoreType === "Percentage" ? record.maximumMarks : undefined,
-      percentage:
-        record.scoreType === "Percentage" ? record.percentage : undefined,
-      cgpa: record.scoreType === "CGPA" ? record.cgpa : undefined,
-    })),
-  });
+const academicData = await AcademicInfo.create({
+  userId,
+  academicRecords: academicRecords.map((record) => ({
+    level: record.level,
+    board: record.board,
+    subject: record.subject,
+    yearOfPassing: record.yearOfPassing,
+    scoreType: record.scoreType,
+    marksObtained:
+      record.scoreType === "Percentage" ? record.marksObtained : undefined,
+    maximumMarks:
+      record.scoreType === "Percentage" ? record.maximumMarks : undefined,
+    percentage:
+      record.scoreType === "Percentage" ? record.percentage : undefined,
+    cgpa: record.scoreType === "CGPA" ? record.cgpa : undefined,
+  })),
+});
+
 
   // Step 6: Save subject info
-  await Subjects.create({
-    majorSubject,
-    minorSubject,
-  });
+  const subjectData = await Subjects.create({
+  majorSubject,
+  minorSubject,
+});
 
   // Step 7: Response
   res.status(201).json(
     new ApiResponse(201, { userId ,
       personalData,
-      AcademicInfo,
-      Subjects}, "Registration with academic and subject info successful")
+      academicData,
+     subjectData}, "Registration with academic and subject info successful")
   );
 });
 
