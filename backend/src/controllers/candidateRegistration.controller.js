@@ -2,6 +2,7 @@ import {asyncHandler} from "../utils/asyncHandler.js";
 import {ApiError} from "../utils/ApiError.js";
 import {ApiResponse} from "../utils/ApiResponse.js";
 import {CandidateRegistration} from "../models/candidateRegistration.model.js";
+import {sendEmail} from "../utils/sendEmail.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 export const registration = asyncHandler(async(req,res)=>{
@@ -27,6 +28,11 @@ export const registration = asyncHandler(async(req,res)=>{
                 verificationExpiryTime: new Date(Date.now() + 10 * 60 * 1000),
             }
         )
+         await sendEmail({
+            to: email,
+            subject: "Your Application ID - Registration Successful",
+             text: `Thank you for registering.\n\nYour Application ID is: ${candidate.applicationId}\n\nPlease use it to log in.`,
+    });
             res.status(201)
             .json(new ApiResponse(201,{
                 applicationId:candidate.applicationId,
