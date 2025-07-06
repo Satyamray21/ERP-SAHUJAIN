@@ -72,6 +72,25 @@ export const loginCandidate = asyncHandler(async(res,req)=>{
         applicationId:candidate.applicationId,
         email:candidate.email,
     },
-  )
+    process.env.ACCESS_TOKEN_SECRET,
+  { expiresIn:process.env.ACCESS_TOKEN_EXPIRY }
+  );
+
+        res
+        .cookie("token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "Strict",
+            maxAge: 12 * 60 * 60 * 1000 
+  })
+        .status(200)
+        .json(new ApiResponse(201,{token,
+        user: {
+        userId: candidate._id,
+        applicationId: candidate.applicationId,
+        email: candidate.email,
+      },
+    },
+      "Login Successful"));
 
 })
