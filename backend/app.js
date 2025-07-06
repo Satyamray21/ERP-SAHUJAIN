@@ -30,4 +30,6 @@ app.use(cookieParser());
 
 import personalInfoRouter from "./src/router/personalInfo.rotuer.js"
 app.use("/api/v1/personalInfo",personalInfoRouter);
+import candidateRegRouter from "./src/router/candidateReg.router.js";
+app.use("/api/v1/candidate",candidateRegRouter);
 export { app }
