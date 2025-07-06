@@ -43,6 +43,7 @@ export const registration = asyncHandler(async(req,res)=>{
     }
     catch (err)
     {
+        console.log("error",err.message);
         throw new ApiError(500,"Error occurred during registration");
     }
 
@@ -50,7 +51,7 @@ export const registration = asyncHandler(async(req,res)=>{
 
 })
 
-export const loginCandidate = asyncHandler(async(res,req)=>{
+export const loginCandidate = asyncHandler(async(req,res)=>{
     const {applicationId,password} = req.body;
 
     if (!applicationId || !password) {
