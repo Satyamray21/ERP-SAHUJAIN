@@ -28,11 +28,35 @@ export const registration = asyncHandler(async(req,res)=>{
                 verificationExpiryTime: new Date(Date.now() + 10 * 60 * 1000),
             }
         )
-         await sendEmail({
-            to: email,
-            subject: "Your Application ID - Registration Successful",
-             text: `Thank you for registering.\n\nYour Application ID is: ${candidate.applicationId}\n\nPlease use it to log in.`,
-    });
+        await sendEmail({
+  to: email,
+  subject: "🎉 Your Application ID - Registration Successful!",
+  text: `Thank you for registering. Your Application ID is: ${candidate.applicationId}`, // fallback
+
+  html: `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f9f9f9; border-radius: 10px; border: 1px solid #ddd;">
+      <h2 style="color: #2c3e50;">🎓 Registration Successful</h2>
+      <p style="font-size: 16px; color: #34495e;">
+        Dear Candidate,
+      </p>
+      <p style="font-size: 16px; color: #2c3e50;">
+        Thank you for registering on <strong>SKJAIN ERP Portal</strong>. We're excited to have you onboard!
+      </p>
+      <p style="font-size: 16px; color: #2980b9; font-weight: bold;">
+        🎫 Your Application ID: <span style="font-size: 18px; color: #e74c3c;">${candidate.applicationId}</span>
+      </p>
+      <p style="font-size: 15px; color: #555;">
+        Please use this Application ID and your password to login to your dashboard and complete your profile.
+      </p>
+      <br />
+      <p style="font-size: 14px; color: #999;">
+        Best Regards,<br/>
+        <strong>SKJAIN ERP Team</strong>
+      </p>
+    </div>
+  `
+});
+
             res.status(201)
             .json(new ApiResponse(201,{
                 applicationId:candidate.applicationId,
