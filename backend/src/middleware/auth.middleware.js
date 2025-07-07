@@ -4,6 +4,7 @@ import { CandidateRegistration } from "../models/candidateRegistration.model.js"
 
 export const authMiddleware = async (req, res, next) => {
   let token;
+console.log("Authorization header:", req.headers.authorization);
 
   
   if (
@@ -18,8 +19,8 @@ export const authMiddleware = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    console.log("✅ decoded:", decoded)
     const candidate = await CandidateRegistration.findById(decoded.id).select("-password");
 
     if (!candidate) {

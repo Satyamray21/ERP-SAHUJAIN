@@ -28,6 +28,10 @@ const candidateRegistrationSchema =  new mongoose.Schema({
         type:Date
 
     },
+    isSubmitted:{
+      type:Boolean,
+      default:false
+    }
 
 },{timestamps:true})
 

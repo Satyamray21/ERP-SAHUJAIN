@@ -5,8 +5,19 @@ import { Subjects } from "../models/subjectInfo.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import {ApiError} from "../utils/ApiError.js";
 import {ApiResponse} from "../utils/ApiResponse.js";
+import {CandidateRegistration} from "../models/candidateRegistration.model.js"
 
-export const registerAllInfo = asyncHandler(async (req, res) => {
+export const registerPersonalInfo = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
+
+ 
+  const candidate = await CandidateRegistration.findById(userId);
+  if (!candidate) {
+    throw new ApiError(404, "Candidate not found");
+  }
+
+  const applicationId = candidate.applicationId;
+
   const {
     firstName,
     middleName,
@@ -35,16 +46,12 @@ export const registerAllInfo = asyncHandler(async (req, res) => {
     mothersName,
     parentsMobile,
     verificationCode,
-    majorSubject,
-    minorSubject,
   } = req.body;
 
-  // Step 1: Validate image uploads
   if (!req.files?.candidate_photo || !req.files?.candidate_signature) {
     throw new ApiError(400, "Photo and Signature are required");
   }
 
-  // Step 2: Upload images to Cloudinary
   const photoUpload = await uploadOnCloudinary(req.files.candidate_photo[0]?.path);
   const signatureUpload = await uploadOnCloudinary(req.files.candidate_signature[0]?.path);
 
@@ -52,8 +59,9 @@ export const registerAllInfo = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Failed to upload image(s) to Cloudinary");
   }
 
-  // Step 3: Save personal info
   const personalData = await personalInfo.create({
+    _id: userId,
+    applicationId, // ✅ Use the existing application number
     firstName,
     middleName,
     lastName,
@@ -89,53 +97,131 @@ export const registerAllInfo = asyncHandler(async (req, res) => {
     candidate_signature: signatureUpload.secure_url,
   });
 
-  const userId = personalData._id;
+  res.status(201).json(
+    new ApiResponse(201, { personalData, applicationId }, "Personal info saved successfully")
+  );
+});
+export const registerAcademicInfo = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
 
-  // Step 4: Parse academicRecords from req.body (must be a JSON string)
-  let academicRecords;
-  try {
-    academicRecords = JSON.parse(req.body.academicRecords);
-  } catch (error) {
-    throw new ApiError(400, "Invalid academicRecords format. Must be JSON string.");
+
+  if (!userId) {
+    throw new ApiError(401, "Unauthorized: user not logged in");
   }
+
+  
+  const academicRecords = req.body.academicRecords;
 
   if (!Array.isArray(academicRecords) || academicRecords.length === 0) {
-    throw new ApiError(400, "Academic records are required");
+    throw new ApiError(400, "Academic records are required.");
   }
 
-  // Step 5: Save academic info
-const academicData = await AcademicInfo.create({
-  userId,
-  academicRecords: academicRecords.map((record) => ({
-    level: record.level,
-    board: record.board,
-    subject: record.subject,
-    yearOfPassing: record.yearOfPassing,
-    scoreType: record.scoreType,
-    marksObtained:
-      record.scoreType === "Percentage" ? record.marksObtained : undefined,
-    maximumMarks:
-      record.scoreType === "Percentage" ? record.maximumMarks : undefined,
-    percentage:
-      record.scoreType === "Percentage" ? record.percentage : undefined,
-    cgpa: record.scoreType === "CGPA" ? record.cgpa : undefined,
-  })),
-});
+  // 🔹 Fetch applicationId from personalInfo
+  const user = await personalInfo.findById(userId);
+  if (!user) {
+    throw new ApiError(404, "User personal info not found");
+  }
 
+  const applicationId = user.applicationId;
+  if (!applicationId) {
+    throw new ApiError(400, "Application number missing in personal info");
+  }
 
-  // Step 6: Save subject info
-  const subjectData = await Subjects.create({
-  majorSubject,
-  minorSubject,
-});
+  // 🔹 Save academic info
+  const academicData = await AcademicInfo.create({
+    userId,
+    academicRecords: academicRecords.map((record) => ({
+      level: record.level,
+      board: record.board,
+      subject: record.subject,
+      yearOfPassing: record.yearOfPassing,
+      scoreType: record.scoreType,
+      marksObtained:
+        record.scoreType === "Percentage" ? record.marksObtained : undefined,
+      maximumMarks:
+        record.scoreType === "Percentage" ? record.maximumMarks : undefined,
+      percentage:
+        record.scoreType === "Percentage" ? record.percentage : undefined,
+      cgpa: record.scoreType === "CGPA" ? record.cgpa : undefined,
+      applicationId, // ✅ attach here
+    })),
+  });
 
-  // Step 7: Response
   res.status(201).json(
-    new ApiResponse(201, { userId ,
-      personalData,
-      academicData,
-     subjectData}, "Registration with academic and subject info successful")
+    new ApiResponse(201, academicData, "Academic info saved successfully.")
   );
 });
 
+export const registerSubjectInfo = asyncHandler(async (req, res) => {
+  const { majorSubject, minorSubject } = req.body;
 
+  const userId = req.user?._id;
+  if (!userId) {
+    throw new ApiError(401, "Unauthorized: user not logged in");
+  }
+
+  const user = await personalInfo.findOne({ _id: userId });
+  if (!user) throw new ApiError(404, "User personal info not found");
+
+  const subjectData = await Subjects.create({
+    userId,
+    applicationId: user.applicationId,
+    majorSubject,
+    minorSubject,
+  });
+
+  res
+    .status(201)
+    .json(new ApiResponse(201, subjectData, "Subject info saved successfully."));
+});
+
+export const submitFinalApplication = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
+
+  const candidate = await CandidateRegistration.findById(userId);
+  if (!candidate) throw new ApiError(404, "Candidate not found");
+
+  const applicationId = candidate.applicationId;
+
+  const [personal, academic, subject] = await Promise.all([
+    personalInfo.findOne({ _id: userId }),
+    AcademicInfo.findOne({ userId }),
+    Subjects.findOne({ userId }),
+  ]);
+
+  if (!personal || !academic || !subject) {
+    throw new ApiError(400, "All steps must be completed before final submission");
+  }
+
+  candidate.isSubmitted = true;
+  await candidate.save();
+
+  res.status(200).json(
+    new ApiResponse(200, { applicationId }, "Application submitted successfully")
+  );
+});
+export const traceApplicationStatus = asyncHandler(async (req, res) => {
+  const { applicationId } = req.params;
+
+  if (!applicationId) {
+    throw new ApiError(400, "Application number is required");
+  }
+
+  const candidate = await CandidateRegistration.findOne({ applicationId });
+  if (!candidate) throw new ApiError(404, "No candidate found");
+
+  const [personal, academic, subject] = await Promise.all([
+    personalInfo.findOne({ applicationId }),
+    AcademicInfo.findOne({ "academicRecords.applicationId": applicationId }),
+    Subjects.findOne({ applicationId }),
+  ]);
+
+  const status = {
+    personalInfo: !!personal,
+    academicInfo: !!academic,
+    subjectInfo: !!subject,
+    finalSubmission: candidate.isSubmitted || false,
+  };
+
+  res.status(200).json(new ApiResponse(200, status, "Application status retrieved"));
+});

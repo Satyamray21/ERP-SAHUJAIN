@@ -47,6 +47,10 @@ const academicEntrySchema = new mongoose.Schema({
       return this.scoreType === 'CGPA';
     },
   },
+    applicationId: {
+    type: String,
+    required: true,
+    }
 });
 
 const academicInfoSchema = new mongoose.Schema(

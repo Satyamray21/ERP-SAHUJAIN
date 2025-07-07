@@ -128,7 +128,12 @@ const  personalInfoSchema = new mongoose.Schema({
             candidate_signature:{
                 type:String,
                 required:String
+            },
+            applicationId: {
+            type: String,
+            required: true,
             }
+
 },
     {timestamps:true})
 
