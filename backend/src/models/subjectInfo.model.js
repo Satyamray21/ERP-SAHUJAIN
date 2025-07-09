@@ -6,6 +6,10 @@ const subjectsInfoSchema = new mongoose.Schema({
     majorSubject:{
         type:[String]
     },
+    applicationId: {
+    type: String,
+    required: true,
+    },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "PersonalInfo",
