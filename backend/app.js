@@ -24,7 +24,7 @@ app.use(express.urlencoded(
         limit: "10mb"
     }
 ))
-app.use('/upload', express.static(path.join(__dirname, 'upload')));
+app.use('/upload', express.static(path.join(__dirname, '/upload')));
 
 app.use(cookieParser());
 

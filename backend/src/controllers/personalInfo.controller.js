@@ -7,10 +7,14 @@ import {ApiError} from "../utils/ApiError.js";
 import {ApiResponse} from "../utils/ApiResponse.js";
 import {CandidateRegistration} from "../models/candidateRegistration.model.js"
 
+import path from "path";
+
 export const registerPersonalInfo = asyncHandler(async (req, res) => {
+  console.log("req", req.body);
+  console.log("files", req.files);
+  
   const userId = req.user?._id;
 
- 
   const candidate = await CandidateRegistration.findById(userId);
   if (!candidate) {
     throw new ApiError(404, "Candidate not found");
@@ -52,8 +56,14 @@ export const registerPersonalInfo = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Photo and Signature are required");
   }
 
-  const photoUpload = await uploadOnCloudinary(req.files.candidate_photo[0]?.path);
-  const signatureUpload = await uploadOnCloudinary(req.files.candidate_signature[0]?.path);
+ const candidatePhotoPath = path.resolve(req.files.candidate_photo[0].path);
+const candidateSignaturePath = path.resolve(req.files.candidate_signature[0].path);
+
+const [photoUpload, signatureUpload] = await Promise.all([
+  uploadOnCloudinary(candidatePhotoPath),
+  uploadOnCloudinary(candidateSignaturePath),
+]);
+
 
   if (!photoUpload || !signatureUpload) {
     throw new ApiError(500, "Failed to upload image(s) to Cloudinary");
@@ -61,7 +71,7 @@ export const registerPersonalInfo = asyncHandler(async (req, res) => {
 
   const personalData = await personalInfo.create({
     _id: userId,
-    applicationId, // ✅ Use the existing application number
+    applicationId,
     firstName,
     middleName,
     lastName,
@@ -101,6 +111,7 @@ export const registerPersonalInfo = asyncHandler(async (req, res) => {
     new ApiResponse(201, { personalData, applicationId }, "Personal info saved successfully")
   );
 });
+
 export const registerAcademicInfo = asyncHandler(async (req, res) => {
   const userId = req.user?._id;
 
