@@ -7,9 +7,10 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 export const registration = asyncHandler(async (req, res) => {
   try {
-    const { email, password, dob, verificationCode } = req.body;
-    if (!email || !password || !dob || !verificationCode) {
-      throw new ApiError(500, "All fields are required");
+    const { email, password, dob, verificationCode, actualVerificationCode } = req.body;
+
+    if (!email || !password || !dob || !verificationCode || !actualVerificationCode) {
+      throw new ApiError(400, "All fields including OTP are required");
     }
 
     const existingUser = await CandidateRegistration.findOne({ email });
@@ -17,72 +18,63 @@ export const registration = asyncHandler(async (req, res) => {
       throw new ApiError(400, "Email already registered");
     }
 
+    // ✅ OTP verification (basic match)
+    if (verificationCode !== actualVerificationCode) {
+      throw new ApiError(400, "Invalid OTP");
+    }
 
-    const candidate = await CandidateRegistration.create(
-      {
-        email,
-        password,
-        dob,
-        verificationCode,
-        verificationExpiryTime: new Date(Date.now() + 10 * 60 * 1000),
-      }
-    )
+    // ✅ Continue with registration
+    const candidate = await CandidateRegistration.create({
+      email,
+      password,
+      dob,
+      verificationCode,
+      verificationExpiryTime: new Date(Date.now() + 10 * 60 * 1000),
+    });
+
+    // ✅ Send confirmation email with Application ID
     await sendEmail({
       to: email,
       subject: "🎉 Registration Successful - Your Application ID Inside!",
       text: `Thank you for registering. Your Application ID is: ${candidate.applicationId}`,
       html: `
-    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f0f4f8; border-radius: 10px; border: 1px solid #ccc;">
-      <h2 style="color: #1a237e; text-align: center;">🎓 Welcome to Sahu Jain College ERP Portal</h2>
-      
-      <p style="font-size: 16px; color: #2c3e50;">
-        Dear Candidate,
-      </p>
-      
-      <p style="font-size: 16px; color: #2c3e50;">
-        We are thrilled to inform you that your registration has been <strong>successfully completed</strong> on the 
-        <strong>Sahu Jain College ERP Portal</strong>.
-      </p>
-
-      <div style="margin: 20px 0; padding: 15px; background-color: #e8f0fe; border-left: 5px solid #1a73e8; border-radius: 8px;">
-        <p style="font-size: 16px; color: #1a237e; font-weight: bold;">
-          🎫 Your Application ID:
-          <span style="font-size: 18px; color: #d32f2f;">${candidate.applicationId}</span>
-        </p>
-      </div>
-
-      <p style="font-size: 15px; color: #444;">
-        Please use this Application ID along with your password to login to your dashboard, where you can complete your profile, upload documents, and monitor your application status.
-      </p>
-
-      <br/>
-
-      <p style="font-size: 14px; color: #999;">
-        Best Regards,<br/>
-        <strong>Sahu Jain College ERP Team</strong><br/>
-        <em>Empowering Education Through Technology</em>
-      </p>
-    </div>
-  `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f0f4f8; border-radius: 10px; border: 1px solid #ccc;">
+          <h2 style="color: #1a237e; text-align: center;">🎓 Welcome to Sahu Jain College ERP Portal</h2>
+          <p style="font-size: 16px; color: #2c3e50;">Dear Candidate,</p>
+          <p style="font-size: 16px; color: #2c3e50;">
+            We are thrilled to inform you that your registration has been <strong>successfully completed</strong> on the 
+            <strong>Sahu Jain College ERP Portal</strong>.
+          </p>
+          <div style="margin: 20px 0; padding: 15px; background-color: #e8f0fe; border-left: 5px solid #1a73e8; border-radius: 8px;">
+            <p style="font-size: 16px; color: #1a237e; font-weight: bold;">
+              🎫 Your Application ID:
+              <span style="font-size: 18px; color: #d32f2f;">${candidate.applicationId}</span>
+            </p>
+          </div>
+          <p style="font-size: 15px; color: #444;">
+            Please use this Application ID along with your password to login to your dashboard, where you can complete your profile, upload documents, and monitor your application status.
+          </p>
+          <br/>
+          <p style="font-size: 14px; color: #999;">
+            Best Regards,<br/>
+            <strong>Sahu Jain College ERP Team</strong><br/>
+            <em>Empowering Education Through Technology</em>
+          </p>
+        </div>
+      `
     });
 
-
-    res.status(201)
-      .json(new ApiResponse(201, {
-        applicationId: candidate.applicationId,
-        candidate,
-      }, "Candidate Registered Successfully"));
-
-
-  }
-  catch (err) {
-    console.log("error", err.message);
+    // ✅ Send response
+    res.status(201).json(new ApiResponse(201, {
+      applicationId: candidate.applicationId,
+      candidate,
+    }, "Candidate Registered Successfully"));
+  } catch (err) {
+    console.error("Registration Error:", err.message);
     throw new ApiError(500, "Error occurred during registration");
   }
+});
 
-
-
-})
 
 export const sendVerificationCode = asyncHandler(async (req, res) => {
   const { email } = req.body;
@@ -114,8 +106,7 @@ export const sendVerificationCode = asyncHandler(async (req, res) => {
     `
   });
 
-  // Optionally store it in a temporary collection or Redis
-  // or just return it (in dev only)
+
   res.status(200).json(
     new ApiResponse(200, {
       verificationCode: otp,

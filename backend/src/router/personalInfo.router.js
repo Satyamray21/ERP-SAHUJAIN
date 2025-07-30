@@ -9,6 +9,9 @@ import {
   import { authMiddleware } from "../middleware/auth.middleware.js";
 import {upload} from "../middleware/imageMulter.middleware.js";
 const router = Router();
+router.get("/test", (req, res) => {
+  res.json({ message: "Test working ✅" });
+});
 router.route("/create").post(upload.fields([
         {
             name:"candidate_photo",

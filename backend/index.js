@@ -5,7 +5,9 @@ dotenv.config({
     path: './.env'
 })
 
-
+app.get('/', (req, res) => {
+    res.send('Welcome to the SK SAHU JAIN APi!');
+});
 connectDB()
     .then(() => {
         app.listen(process.env.PORT || 3000, () => {
