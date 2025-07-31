@@ -19,7 +19,8 @@
     }
   },
   "consumes": [
-    "application/json"
+    "application/json",
+    "multipart/form-data"
   ],
   "produces": [
     "application/json"
@@ -259,9 +260,6 @@
                 },
                 "verificationCode": {
                   "example": "any"
-                },
-                "actualVerificationCode": {
-                  "example": "any"
                 }
               }
             }
@@ -297,6 +295,30 @@
         "responses": {
           "default": {
             "description": ""
+          }
+        }
+      }
+    },
+    "/api/v1/candidate/send-Otp": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }

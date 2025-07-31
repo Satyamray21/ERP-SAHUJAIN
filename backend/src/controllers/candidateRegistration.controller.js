@@ -5,11 +5,21 @@ import { CandidateRegistration } from "../models/candidateRegistration.model.js"
 import { sendEmail } from "../utils/sendEmail.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+// Top of file or above sendVerificationCode
+function generateOTP(length = 6) {
+  let otp = '';
+  for (let i = 0; i < length; i++) {
+    otp += Math.floor(Math.random() * 10);
+  }
+  return otp;
+}
+const otpStore = new Map(); // email => { code, expiry }
+
 export const registration = asyncHandler(async (req, res) => {
   try {
-    const { email, password, dob, verificationCode, actualVerificationCode } = req.body;
+    const { email, password, dob, verificationCode } = req.body;
 
-    if (!email || !password || !dob || !verificationCode || !actualVerificationCode) {
+    if (!email || !password || !dob || !verificationCode) {
       throw new ApiError(400, "All fields including OTP are required");
     }
 
@@ -18,22 +28,29 @@ export const registration = asyncHandler(async (req, res) => {
       throw new ApiError(400, "Email already registered");
     }
 
-    // ✅ OTP verification (basic match)
-    if (verificationCode !== actualVerificationCode) {
-      throw new ApiError(400, "Invalid OTP");
+    const stored = otpStore.get(email);
+    
+    if (
+      !stored ||
+      stored.code !== verificationCode ||
+      stored.expiry < new Date()
+    ) {
+      console.log("❌ Invalid or expired OTP");
+      throw new ApiError(400, "Invalid or expired OTP");
     }
 
-    // ✅ Continue with registration
+    otpStore.delete(email); // Clean up
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     const candidate = await CandidateRegistration.create({
       email,
-      password,
+      password: hashedPassword,
       dob,
       verificationCode,
-      verificationExpiryTime: new Date(Date.now() + 10 * 60 * 1000),
     });
 
-    // ✅ Send confirmation email with Application ID
-    await sendEmail({
+     await sendEmail({
       to: email,
       subject: "🎉 Registration Successful - Your Application ID Inside!",
       text: `Thank you for registering. Your Application ID is: ${candidate.applicationId}`,
@@ -64,7 +81,6 @@ export const registration = asyncHandler(async (req, res) => {
       `
     });
 
-    // ✅ Send response
     res.status(201).json(new ApiResponse(201, {
       applicationId: candidate.applicationId,
       candidate,
@@ -74,6 +90,7 @@ export const registration = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Error occurred during registration");
   }
 });
+
 
 
 export const sendVerificationCode = asyncHandler(async (req, res) => {
@@ -89,31 +106,27 @@ export const sendVerificationCode = asyncHandler(async (req, res) => {
   }
 
   const otp = generateOTP();
-  const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  const expiry = new Date(Date.now() + 10 * 60 * 1000);
 
+  // Store OTP in memory
+  otpStore.set(email, { code: otp, expiry });
+ 
   await sendEmail({
     to: email,
     subject: "Your SKJAIN Registration OTP",
     html: `
       <div style="font-family:Arial,sans-serif; padding:20px; border:1px solid #ddd;">
-        <h2 style="color:#333;">🛡️ Email Verification</h2>
-        <p style="font-size:16px;">Use the following OTP to verify your email:</p>
+        <h2>🛡️ Email Verification</h2>
+        <p>Use the following OTP to verify your email:</p>
         <h3 style="color:#e74c3c;">${otp}</h3>
         <p>This OTP is valid for 10 minutes.</p>
-        <br/>
-        <p style="font-size:14px; color:#888;">- SKJAIN ERP Team</p>
       </div>
     `
   });
 
-
-  res.status(200).json(
-    new ApiResponse(200, {
-      verificationCode: otp,
-      expiryTime: expiry,
-    }, "OTP sent successfully")
-  );
+  res.status(200).json(new ApiResponse(200, null, "OTP sent successfully"));
 });
+
 
 export const loginCandidate = asyncHandler(async (req, res) => {
   const { applicationId, password } = req.body;
