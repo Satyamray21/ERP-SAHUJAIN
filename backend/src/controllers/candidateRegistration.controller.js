@@ -41,11 +41,10 @@ export const registration = asyncHandler(async (req, res) => {
 
     otpStore.delete(email); // Clean up
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
+   
     const candidate = await CandidateRegistration.create({
       email,
-      password: hashedPassword,
+      password,
       dob,
       verificationCode,
     });
