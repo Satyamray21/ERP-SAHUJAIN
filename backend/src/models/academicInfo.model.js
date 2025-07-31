@@ -8,49 +8,57 @@ const academicEntrySchema = new mongoose.Schema({
   },
   board: {
     type: String,
-    required: true,
+    required: function () {
+      return this.level !== 'Graduation'; // Not required for Graduation
+    },
   },
   subject: {
     type: String,
-    required: true,
+    required: function () {
+      return this.level !== 'Graduation'; // Not required for Graduation
+    },
   },
   yearOfPassing: {
     type: Number,
-    required: true,
+    required: function () {
+      return this.level !== 'Graduation';
+    },
   },
   scoreType: {
     type: String,
     enum: ['Percentage', 'CGPA'],
-    required: true,
+    required: function () {
+      return this.level !== 'Graduation';
+    },
   },
   marksObtained: {
     type: Number,
     required: function () {
-      return this.scoreType === 'Percentage';
+      return this.scoreType === 'Percentage' && this.level !== 'Graduation';
     },
   },
   maximumMarks: {
     type: Number,
     required: function () {
-      return this.scoreType === 'Percentage';
+      return this.scoreType === 'Percentage' && this.level !== 'Graduation';
     },
   },
   percentage: {
     type: Number,
     required: function () {
-      return this.scoreType === 'Percentage';
+      return this.scoreType === 'Percentage' && this.level !== 'Graduation';
     },
   },
   cgpa: {
     type: String,
     required: function () {
-      return this.scoreType === 'CGPA';
+      return this.scoreType === 'CGPA' && this.level !== 'Graduation';
     },
   },
-    applicationId: {
+  applicationId: {
     type: String,
     required: true,
-    }
+  },
 });
 
 const academicInfoSchema = new mongoose.Schema(
