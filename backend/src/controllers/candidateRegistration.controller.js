@@ -2,6 +2,9 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { CandidateRegistration } from "../models/candidateRegistration.model.js";
+import { personalInfo } from "../models/personalInformation.model.js";
+import { AcademicInfo } from "../models/academicInfo.model.js";
+import { Subjects } from "../models/subjectInfo.model.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -139,13 +142,9 @@ export const loginCandidate = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Candidate not found with this application");
   }
 
-
   const isPasswordValid = await bcrypt.compare(password, candidate.password);
-
   if (!isPasswordValid) {
-
     throw new ApiError(401, "Invalid Application ID or Password");
-
   }
 
   const token = jwt.sign(
@@ -158,22 +157,39 @@ export const loginCandidate = asyncHandler(async (req, res) => {
     { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
   );
 
+  // 🔹 Fetch additional data using applicationId
+  const [personal, academic, subject] = await Promise.all([
+    personalInfo.findOne({ applicationId }),
+    AcademicInfo.findOne({ "academicRecords.applicationId": applicationId }),
+    Subjects.findOne({ applicationId }),
+  ]);
+
   res
     .cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "Strict",
-      maxAge: 12 * 60 * 60 * 1000
+      maxAge: 12 * 60 * 60 * 1000,
     })
     .status(200)
-    .json(new ApiResponse(201, {
-      token,
-      user: {
-        userId: candidate._id,
-        applicationId: candidate.applicationId,
-        email: candidate.email,
-      },
-    },
-      "Login Successful"));
+    .json(
+      new ApiResponse(
+        200,
+        {
+          token,
+          user: {
+            userId: candidate._id,
+            applicationId: candidate.applicationId,
+            email: candidate.email,
+            dob: candidate.dob,
+            isSubmitted: candidate.isSubmitted,
+          },
+          personalInfo: personal || null,
+          academicInfo: academic || null,
+          subjectInfo: subject || null,
+        },
+        "Login Successful"
+      )
+    );
+});
 
-})

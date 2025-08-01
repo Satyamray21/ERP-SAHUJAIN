@@ -6,7 +6,7 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import {ApiError} from "../utils/ApiError.js";
 import {ApiResponse} from "../utils/ApiResponse.js";
 import {CandidateRegistration} from "../models/candidateRegistration.model.js"
-
+import { sendEmail } from "../utils/sendEmail.js";
 import path from "path";
 
 export const registerPersonalInfo = asyncHandler(async (req, res) => {
@@ -207,10 +207,26 @@ export const submitFinalApplication = asyncHandler(async (req, res) => {
   candidate.isSubmitted = true;
   await candidate.save();
 
+  const fullName = `${personal.firstName} ${personal.middleName || ""} ${personal.lastName}`.trim();
+
+  await sendEmail({
+    to: candidate.email,
+    subject: "Application Submitted Successfully",
+    text: `Dear ${fullName}, your application (ID: ${applicationId}) has been successfully submitted.`,
+    html: `
+      <p>Dear <strong>${fullName}</strong>,</p>
+      <p>We are pleased to inform you that your application has been <strong>successfully submitted</strong>.</p>
+      <p><strong>Application ID:</strong> ${applicationId}</p>
+      <br/>
+      <p>Thank you for applying.<br/>SAHU JAIN ERP Team</p>
+    `,
+  });
+
   res.status(200).json(
     new ApiResponse(200, { applicationId }, "Application submitted successfully")
   );
 });
+
 export const traceApplicationStatus = asyncHandler(async (req, res) => {
   const { applicationId } = req.params;
 
